@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Tickets - Cupissa</title>
+    <!-- Fuente para diseño aesthetic y de ticket -->
+    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <!-- Librería para convertir el HTML del ticket a Imagen -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --primary: #d81b60; /* Ajustado al tono de Cupissa */
+            --bg-color: #f7f7f8;
+            --ticket-bg: #ffffff;
+            --text-main: #333333;
+            --text-muted: #777777;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+        /* Panel de Control (Formulario) */
+        .control-panel {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            width: 100%;
+            max-width: 400px;
+        }
+        h2 {
+            margin-top: 0;
+            font-size: 1.2rem;
+            color: var(--text-main);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            font-size: 0.85rem;
+            margin-bottom: 5px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+        .row {
+            display: flex;
+            gap: 10px;
+        }
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            width: 100%;
+            margin-bottom: 10px;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background-color: #b0154e;
+        }
+        .btn-whatsapp {
+            background-color: #25D366;
+        }
+        .btn-whatsapp:hover {
+            background-color: #1ebd57;
+        }
+        .btn-outline {
+            background-color: transparent;
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+        .btn-outline:hover {
+            background-color: #fff0f5;
+        }
+        
+        /* Diseño del Ticket (Aesthetic) */
+        .ticket-container {
+            background: var(--ticket-bg);
+            width: 320px;
+            padding: 30px 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            position: relative;
+            font-family: 'Courier Prime', monospace;
+            color: var(--text-main);
+            /* Bordes dentados simulados */
+            background-image: radial-gradient(circle at 10px 0, transparent 10px, var(--ticket-bg) 11px);
+            background-size: 20px 20px;
+            background-position: -10px -10px;
+            background-repeat: repeat-x;
+        }
+        .ticket-container::after {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 20px;
+            background-image: radial-gradient(circle at 10px 20px, transparent 10px, var(--ticket-bg) 11px);
+            background-size: 20px 20px;
+            background-position: -10px 10px;
+            background-repeat: repeat-x;
+        }
+        .ticket-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .ticket-header img {
+            max-width: 150px;
+            height: auto;
+            margin-bottom: 10px;
+        }
+        .ticket-header p {
+            margin: 2px 0;
+            font-size: 0.85rem;
+        }
+        .divider {
+            border-top: 1px dashed #ccc;
+            margin: 15px 0;
+        }
+        .client-info {
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+        }
+        .items-table {
+            width: 100%;
+            font-size: 0.85rem;
+            border-collapse: collapse;
+        }
+        .items-table th, .items-table td {
+            text-align: left;
+            padding: 4px 0;
+            vertical-align: top;
+        }
+        .items-table th:last-child, .items-table td:last-child {
+            text-align: right;
+        }
+        .totals {
+            margin-top: 15px;
+            font-size: 0.9rem;
+        }
+        .totals-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+        }
+        .totals-row.main-total {
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+        .payment-info {
+            font-size: 0.8rem;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .qr-code {
+            text-align: center;
+            margin-top: 15px;
+        }
+        .qr-code img {
+            width: 100px;
+            height: 100px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Panel de Control -->
+    <div class="control-panel">
+        <h2>Generar Nuevo Pedido</h2>
+        
+        <div class="form-group">
+            <label>Nombre del Cliente (Opcional)</label>
+            <input type="text" id="clientName" placeholder="Ej. María Pérez" oninput="updateTicket()">
+        </div>
+        
+        <div class="divider"></div>
+        
+        <div class="form-group">
+            <label>Agregar Producto</label>
+            <input type="text" id="prodDesc" placeholder="Descripción del producto">
+        </div>
+        <div class="row">
+            <div class="form-group" style="flex: 1;">
+                <label>Cantidad</label>
+                <input type="number" id="prodQty" value="1" min="1">
+            </div>
+            <div class="form-group" style="flex: 2;">
+                <label>Precio Unit. ($)</label>
+                <input type="number" id="prodPrice" step="0.01" placeholder="0.00">
+            </div>
+        </div>
+        <button class="btn-outline" onclick="addItem()">+ Añadir al Ticket</button>
+        
+        <div class="divider"></div>
+        
+        <div class="form-group">
+            <label>Tasa de Cambio (Soberanos por 1$)</label>
+            <input type="number" id="exchangeRate" value="1000" oninput="updateTicket()">
+        </div>
+        
+        <div class="divider"></div>
+
+        <button onclick="downloadTicket()">1. Descargar Ticket (Imagen)</button>
+        <button class="btn-whatsapp" onclick="sendWhatsApp()">2. Enviar por WhatsApp</button>
+        <p style="font-size: 0.75rem; color: #777; text-align: center;">Nota: WhatsApp no permite adjuntar imágenes automáticamente por enlace. Descarga el ticket primero y adjúntalo al chat que se abrirá.</p>
+        <button class="btn-outline" style="border: none; color: #888;" onclick="resetTicket()">Limpiar Ticket</button>
+    </div>
+
+    <!-- Previsualización del Ticket -->
+    <div class="ticket-container" id="ticketDOM">
+        <div class="ticket-header">
+            <img src="cupissa (500 x 100 px).png" alt="Cupissa Logo">
+            <p>PEDIDO CONFIRMADO</p>
+            <p id="ticketDate"></p>
+        </div>
+        
+        <div class="client-info" id="ticketClientBox" style="display: none;">
+            Cliente: <span id="ticketClientName"></span>
+        </div>
+        
+        <div class="divider"></div>
+        
+        <table class="items-table" id="ticketItemsTable">
+            <thead>
+                <tr>
+                    <th style="width: 15%">Cant</th>
+                    <th style="width: 55%">Descripción</th>
+                    <th style="width: 30%">Total</th>
+                </tr>
+            </thead>
+            <tbody id="ticketItemsBody">
+                <!-- Los items aparecerán aquí -->
+            </tbody>
+        </table>
+        
+        <div class="divider"></div>
+        
+        <div class="totals">
+            <div class="totals-row main-total">
+                <span>TOTAL USD:</span>
+                <span id="ticketTotalUSD">$0.00</span>
+            </div>
+            <div class="totals-row">
+                <span>TOTAL BS:</span>
+                <span id="ticketTotalBs">Bs 0.00</span>
+            </div>
+        </div>
+        
+        <div class="divider"></div>
+        
+        <div class="payment-info">
+            <strong>DATOS PARA PAGO MÓVIL</strong><br>
+            Banco Fondo Común (BFC)<br>
+            Cuenta Corriente<br>
+            V-37.830.901<br>
+            Celular: 0424-2897281
+        </div>
+        
+        <div class="qr-code">
+            <img src="qr.png" alt="QR Pago Movil">
+        </div>
+        
+        <div style="text-align: center; margin-top: 20px; font-size: 0.8rem;">
+            ¡Gracias por tu compra!
+        </div>
+    </div>
+
+    <script>
+        let items = [];
+
+        // Inicializar fecha
+        document.getElementById('ticketDate').innerText = new Date().toLocaleDateString('es-ES', { 
+            year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+        });
+
+        function addItem() {
+            const desc = document.getElementById('prodDesc').value;
+            const qty = parseFloat(document.getElementById('prodQty').value);
+            const price = parseFloat(document.getElementById('prodPrice').value);
+
+            if (!desc || isNaN(qty) || isNaN(price)) {
+                alert("Por favor, completa los campos del producto correctamente.");
+                return;
+            }
+
+            items.push({ desc, qty, price, total: qty * price });
+            
+            // Limpiar inputs
+            document.getElementById('prodDesc').value = '';
+            document.getElementById('prodQty').value = '1';
+            document.getElementById('prodPrice').value = '';
+            
+            updateTicket();
+        }
+
+        function updateTicket() {
+            // Actualizar Cliente
+            const clientName = document.getElementById('clientName').value;
+            const clientBox = document.getElementById('ticketClientBox');
+            if (clientName.trim() !== "") {
+                document.getElementById('ticketClientName').innerText = clientName;
+                clientBox.style.display = "block";
+            } else {
+                clientBox.style.display = "none";
+            }
+
+            // Actualizar Tabla
+            const tbody = document.getElementById('ticketItemsBody');
+            tbody.innerHTML = '';
+            let totalUSD = 0;
+
+            items.forEach(item => {
+                totalUSD += item.total;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${item.qty}x</td>
+                    <td>${item.desc}</td>
+                    <td>$${item.total.toFixed(2)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Actualizar Totales
+            const rate = parseFloat(document.getElementById('exchangeRate').value) || 1000;
+            const totalBs = totalUSD * rate;
+
+            document.getElementById('ticketTotalUSD').innerText = `$${totalUSD.toFixed(2)}`;
+            document.getElementById('ticketTotalBs').innerText = `Bs ${totalBs.toLocaleString('es-VE', {minimumFractionDigits: 2})}`;
+        }
+
+        function resetTicket() {
+            items = [];
+            document.getElementById('clientName').value = '';
+            document.getElementById('exchangeRate').value = '1000';
+            updateTicket();
+        }
+
+        function downloadTicket() {
+            const ticketElement = document.getElementById('ticketDOM');
+            html2canvas(ticketElement, { scale: 3 }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `Ticket_Cupissa_${Date.now()}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        }
+
+        function sendWhatsApp() {
+            const clientName = document.getElementById('clientName').value;
+            const totalUSD = document.getElementById('ticketTotalUSD').innerText;
+            const totalBs = document.getElementById('ticketTotalBs').innerText;
+            
+            let message = `¡Hola${clientName ? ' ' + clientName : ''}! Aquí tienes el resumen de tu pedido en Cupissa.\n\n`;
+            message += `*Total USD:* ${totalUSD}\n*Total Bs:* ${totalBs}\n\n`;
+            message += `Te enviaré la imagen del ticket con los datos de pago a continuación.`;
+
+            const encodedMessage = encodeURIComponent(message);
+            window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
+        }
+    </script>
+</body>
+</html>
